@@ -1,5 +1,5 @@
 {
-  "name": "mindful-claude",
+  "name": "mindful-claude-local",
   "owner": { "name": "Anthony" },
   "metadata": { "description": "mindful-claude: breathe while Claude works" },
   "plugins": [

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { EXERCISES, cycleMs, ease, exerciseOf, phaseAt, phaseLine, resolveExercise, secondsLeft } from '../hooks/breath/exercises.ts'
+import { EXERCISES, cycleMs, ease, exerciseOf, phaseAt, phaseLine, pickExercise, resolveExercise, secondsLeft } from '../hooks/breath/exercises.ts'
 
 describe('exercises', () => {
   test('four exercises, keyed as /breathe names them', () => {
@@ -54,6 +54,14 @@ describe('exercises', () => {
     expect(secondsLeft(phaseAt(ex, 0))).toBe(6)
     expect(secondsLeft(phaseAt(ex, 4600))).toBe(1)
     expect(phaseLine(phaseAt(ex, 6000))).toBe('Breathe out... 5s')
+  })
+
+  test('random picks an exercise other than the last', () => {
+    const seen = new Set<string>()
+    for (let i = 0; i < 40; i++) seen.add(pickExercise('random', 'hrv', Math.random))
+    expect(seen.has('hrv')).toBe(false)
+    expect(seen.size).toBe(3)
+    expect(pickExercise('box', 'box')).toBe('box')
   })
 
   test('elapsed time wraps, negatives included', () => {
