@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { EXERCISES, cycleMs, ease, exerciseOf, phaseAt, phaseLine, pickExercise, resolveExercise, secondsLeft } from '../hooks/breath/exercises.ts'
+import { EXERCISES, cycleMs, cyclesDone, ease, exerciseOf, phaseAt, phaseLine, pickExercise, resolveExercise, secondsLeft } from '../hooks/breath/exercises.ts'
 
 describe('exercises', () => {
   test('four exercises, keyed as /breathe names them', () => {
@@ -62,6 +62,13 @@ describe('exercises', () => {
     expect(seen.has('hrv')).toBe(false)
     expect(seen.size).toBe(3)
     expect(pickExercise('box', 'box')).toBe('box')
+  })
+
+  test('cycles end after whole breaths; 0 never ends', () => {
+    const ex = exerciseOf('hrv')
+    expect(cyclesDone(ex, 21999, 2)).toBe(false)
+    expect(cyclesDone(ex, 22000, 2)).toBe(true)
+    expect(cyclesDone(ex, 1e9, 0)).toBe(false)
   })
 
   test('elapsed time wraps, negatives included', () => {

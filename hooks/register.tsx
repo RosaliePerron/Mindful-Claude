@@ -1,7 +1,7 @@
 /* @jsx h */
 import type { Register } from 'claude-code'
 import { DEFAULTS, applyCommand, readConfig, type Config } from './breath/config.ts'
-import { pickExercise, type ExerciseKey } from './breath/exercises.ts'
+import { cycleMs, cyclesDone, exerciseOf, pickExercise, type ExerciseKey } from './breath/exercises.ts'
 import { pickStyle, type Style } from './breath/shapes.ts'
 
 // The hooks module. While a turn runs it mounts ./breathe.tsx above the prompt (the band's
@@ -20,6 +20,10 @@ let lastExercise: ExerciseKey | undefined
 let phase: { word: string; exercise: string } | undefined
 
 const log = ($: { ui: { log: (text: string) => void } }, what: string) => (err: unknown) => $.ui.log(`mindful-claude: ${what}: ${err}`)
+
+// how far into the breath a turn is: the breath starts when the delay ends, on an inhale
+const breathMs = (t: NonNullable<typeof turn>, now: number) => now - t.startedAt - config.delay * 1000
+const finished = (t: NonNullable<typeof turn>, now: number) => cyclesDone(exerciseOf(t.exercise), breathMs(t, now), config.cycles)
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -56,6 +60,9 @@ export const register: Register = on => {
     phase = undefined
     // the band is drawn from a delay on: wake the render hook when it has passed
     if (config.delay > 0) $.clock.after(config.delay * 1000, () => $.ui.invalidate('ui.render'))
+    // and when the last cycle ends, to take it down
+    // ponytail: timed at turn start; a mid-turn /breathe cycles with the spinner off waits for the next redraw
+    if (config.cycles > 0) $.clock.after(config.delay * 1000 + config.cycles * cycleMs(exerciseOf(exercise)), () => $.ui.invalidate('ui.render'))
     $.ui.invalidate('ui.render')
     return next(e)
   })
@@ -84,8 +91,8 @@ export const register: Register = on => {
     const now = await $.clock.now()
     // a turn the hook saw start; else one that is working anyway (started before the plugin loaded)
     const running = turn ?? (turn = { startedAt: now, style: pickStyle(config.style, lastStyle), exercise: pickExercise(config.exercise, lastExercise) })
-    const elapsedMs = now - running.startedAt
-    if (elapsedMs < config.delay * 1000) return next(e)
+    const elapsedMs = breathMs(running, now)
+    if (elapsedMs < 0 || finished(running, now)) return next(e)
     const { Box, Client } = $.ui.resolve(e)
     const rows = Math.min(BAND_ROWS, e.props.maxRows)
     if (rows < 1) return next(e)
@@ -102,7 +109,7 @@ export const register: Register = on => {
 
   // the spinner's word becomes the breath: `✻ Breathe in 4s…`
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
-    if (!config.enabled || !config.spinner || !phase) return next(e)
+    if (!config.enabled || !config.spinner || !phase || (turn && finished(turn, await $.clock.now()))) return next(e)
     return next({ ...e, props: { ...e.props, message: phase.word } })
   })
 }

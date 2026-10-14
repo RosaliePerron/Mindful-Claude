@@ -22,7 +22,7 @@ export default function Breathe(props: Props, surface: ClientSurface<State>) {
   const style: Style = isStyle(props?.style) ? props.style : 'pulse'
 
   if (surface.state === undefined) {
-    // elapsedMs says how far into the turn the band mounted (a delay); the clock runs from there
+    // elapsedMs says how far into the breath the band mounted (a remount mid-turn); the clock runs from there
     surface.setState({ tick: 0, offsetMs: props?.elapsedMs ?? 0, line: '' })
     surface.every(TICK_MS, () => {
       const s = surface.state
