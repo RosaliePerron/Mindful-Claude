@@ -44,7 +44,9 @@ To remove it: `claude plugin uninstall mindful-claude`.
 | `/breathe box` | Box Breathing: 4s in, 4s hold, 4s out, 4s hold |
 | `/breathe 478` | 4-7-8 Breathing: 4s in, 7s hold, 8s out |
 | `/breathe style wave` | Pin a style: `pulse`, `ripples`, `dots`, `wave`, or `random` |
+| `/breathe random` | A different exercise each turn (default) |
 | `/breathe delay 5` | Seconds into a turn before the band appears (default 0) |
+| `/breathe cycles 3` | Breaths the band runs before it goes; `0` runs it all turn (default 0) |
 | `/breathe spinner off` | Leave the spinner alone |
 
 Settings persist across sessions.

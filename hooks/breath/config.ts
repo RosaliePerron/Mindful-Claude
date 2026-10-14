@@ -9,11 +9,13 @@ export type Config = {
   style: Style | 'random'
   /** Seconds Claude works before the band appears; 0 shows it at once. */
   delay: number
+  /** Breaths the band runs before it goes; 0 runs it all turn. */
+  cycles: number
   /** Whether the spinner line reads the breath's phase too. */
   spinner: boolean
 }
 
-export const DEFAULTS: Config = { enabled: true, exercise: 'random', style: 'random', delay: 0, spinner: true }
+export const DEFAULTS: Config = { enabled: true, exercise: 'random', style: 'random', delay: 0, cycles: 0, spinner: true }
 
 /** A config from what the store held, field by field, defaults for the rest. */
 export function readConfig(saved: unknown): Config {
@@ -23,13 +25,14 @@ export function readConfig(saved: unknown): Config {
     exercise: s.exercise === 'random' || isExerciseKey(s.exercise) ? s.exercise : DEFAULTS.exercise,
     style: s.style === 'random' || isStyle(s.style) ? s.style : DEFAULTS.style,
     delay: typeof s.delay === 'number' && s.delay >= 0 && Number.isFinite(s.delay) ? s.delay : DEFAULTS.delay,
+    cycles: typeof s.cycles === 'number' && Number.isInteger(s.cycles) && s.cycles >= 0 ? s.cycles : DEFAULTS.cycles,
     spinner: typeof s.spinner === 'boolean' ? s.spinner : DEFAULTS.spinner,
   }
 }
 
 export function statusLine(c: Config): string {
   const ex = c.exercise === 'random' ? 'random exercise' : `${exerciseOf(c.exercise).name} (${exerciseOf(c.exercise).pattern})`
-  return `breathe: ${c.enabled ? 'on' : 'off'} · ${ex} · style ${c.style} · delay ${c.delay}s · spinner ${c.spinner ? 'on' : 'off'}`
+  return `breathe: ${c.enabled ? 'on' : 'off'} · ${ex} · style ${c.style} · delay ${c.delay}s · cycles ${c.cycles || 'unlimited'} · spinner ${c.spinner ? 'on' : 'off'}`
 }
 
 export const HELP = [
@@ -39,6 +42,7 @@ export const HELP = [
   '/breathe random        a different exercise each turn',
   `/breathe style <name>  ${STYLES.join(', ')} or random`,
   '/breathe delay <s>     seconds Claude works before the band appears (0 = at once)',
+  '/breathe cycles <n>    breaths before the band goes (0 = all turn)',
   '/breathe spinner on|off  read the phase in the spinner line too',
 ].join('\n')
 
@@ -76,6 +80,14 @@ export function applyCommand(config: Config, args: string): { config: Config; te
       return { config: next, text: statusLine(next) }
     }
     return { config, text: 'breathe: delay takes a number of seconds, 0 or more' }
+  }
+  if (head === 'cycles') {
+    const cycles = Number(arg)
+    if (arg !== undefined && Number.isInteger(cycles) && cycles >= 0) {
+      const next = { ...config, cycles }
+      return { config: next, text: statusLine(next) }
+    }
+    return { config, text: 'breathe: cycles takes a whole number, 0 for no limit' }
   }
   if (head === 'spinner') {
     if (arg === 'on' || arg === 'off') {

@@ -45,6 +45,17 @@ describe('config', () => {
     expect(applyCommand(DEFAULTS, 'delay soon').config).toBe(DEFAULTS)
   })
 
+  test('cycles takes a whole number, refuses the rest', () => {
+    expect(applyCommand(DEFAULTS, 'cycles 3').config.cycles).toBe(3)
+    expect(applyCommand(DEFAULTS, 'cycles 3').text).toContain('cycles 3')
+    expect(applyCommand({ ...DEFAULTS, cycles: 3 }, 'cycles 0').config.cycles).toBe(0)
+    expect(applyCommand(DEFAULTS, 'cycles').config).toBe(DEFAULTS)
+    expect(applyCommand(DEFAULTS, 'cycles 1.5').config).toBe(DEFAULTS)
+    expect(applyCommand(DEFAULTS, 'cycles -1').config).toBe(DEFAULTS)
+    expect(readConfig({ cycles: 4 }).cycles).toBe(4)
+    expect(readConfig({ cycles: -2 }).cycles).toBe(0)
+  })
+
   test('spinner on or off', () => {
     expect(applyCommand(DEFAULTS, 'spinner off').config.spinner).toBe(false)
     expect(applyCommand(DEFAULTS, 'spinner maybe').config).toBe(DEFAULTS)

@@ -47,6 +47,9 @@ export function pickExercise(setting: ExerciseKey | 'random', last: ExerciseKey 
 
 export const cycleMs = (ex: Exercise): number => ex.inhaleMs + ex.hold1Ms + ex.exhaleMs + ex.hold2Ms
 
+/** Whether `cycles` whole breaths fit in `breathMs`; 0 cycles never ends. */
+export const cyclesDone = (ex: Exercise, breathMs: number, cycles: number): boolean => cycles > 0 && breathMs >= cycles * cycleMs(ex)
+
 export type PhaseLabel = 'Breathe in' | 'Sip in' | 'Hold' | 'Breathe out'
 
 export type Phase = {
