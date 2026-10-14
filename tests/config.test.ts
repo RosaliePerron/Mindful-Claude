@@ -25,6 +25,8 @@ describe('config', () => {
     expect(applyCommand(DEFAULTS, 'box').config.exercise).toBe('box')
     expect(applyCommand(DEFAULTS, 'relax').config.exercise).toBe('478')
     expect(applyCommand(DEFAULTS, 'sigh').text).toContain('Physiological Sigh')
+    expect(applyCommand({ ...DEFAULTS, exercise: 'box' }, 'random').config.exercise).toBe('random')
+    expect(readConfig({ exercise: 'random' }).exercise).toBe('random')
   })
 
   test('style, with and without the word', () => {

@@ -1,6 +1,7 @@
 /* @jsx h */
 import type { Register } from 'claude-code'
 import { DEFAULTS, applyCommand, readConfig, type Config } from './breath/config.ts'
+import { pickExercise, type ExerciseKey } from './breath/exercises.ts'
 import { pickStyle, type Style } from './breath/shapes.ts'
 
 // The hooks module. While a turn runs it mounts ./breathe.tsx above the prompt (the band's
@@ -11,9 +12,10 @@ import { pickStyle, type Style } from './breath/shapes.ts'
 const BAND_ROWS = 9 // seven rows of picture, the phase line, the exercise name
 
 let config: Config = DEFAULTS
-// the running turn: when it started and which style it drew
-let turn: { startedAt: number; style: Style } | undefined
+// the running turn: when it started and which style and exercise it drew
+let turn: { startedAt: number; style: Style; exercise: ExerciseKey } | undefined
 let lastStyle: Style | undefined
+let lastExercise: ExerciseKey | undefined
 // the breath the band last posted, for the spinner
 let phase: { word: string; exercise: string } | undefined
 
@@ -36,6 +38,8 @@ export const register: Register = on => {
   on('command.run', { command: 'breathe' }, async ($, e) => {
     const applied = applyCommand(config, e.args)
     if (applied.config !== config) {
+      // a new exercise mid-turn shows at once, as before the per-turn pick
+      if (turn && applied.config.exercise !== config.exercise) turn.exercise = pickExercise(applied.config.exercise, turn.exercise)
       config = applied.config
       await $.store.set('config', config).catch(log($, 'store write failed'))
       $.ui.invalidate('ui.render')
@@ -45,8 +49,10 @@ export const register: Register = on => {
 
   on('turn.start', async ($, e, next) => {
     const style = pickStyle(config.style, lastStyle)
+    const exercise = pickExercise(config.exercise, lastExercise)
     lastStyle = style
-    turn = { startedAt: await $.clock.now(), style }
+    lastExercise = exercise
+    turn = { startedAt: await $.clock.now(), style, exercise }
     phase = undefined
     // the band is drawn from a delay on: wake the render hook when it has passed
     if (config.delay > 0) $.clock.after(config.delay * 1000, () => $.ui.invalidate('ui.render'))
@@ -77,18 +83,18 @@ export const register: Register = on => {
     if (e.surface !== 'terminal' || !config.enabled || !e.props.isWorking || e.props.hasSurvey) return next(e)
     const now = await $.clock.now()
     // a turn the hook saw start; else one that is working anyway (started before the plugin loaded)
-    const running = turn ?? (turn = { startedAt: now, style: pickStyle(config.style, lastStyle) })
+    const running = turn ?? (turn = { startedAt: now, style: pickStyle(config.style, lastStyle), exercise: pickExercise(config.exercise, lastExercise) })
     const elapsedMs = now - running.startedAt
     if (elapsedMs < config.delay * 1000) return next(e)
     const { Box, Client } = $.ui.resolve(e)
     const rows = Math.min(BAND_ROWS, e.props.maxRows)
     if (rows < 1) return next(e)
     // the key names the turn: one instance per turn, remounted when the settings change mid-turn
-    const key = `breathe:${running.startedAt}:${config.exercise}:${running.style}`
+    const key = `breathe:${running.startedAt}:${running.exercise}:${running.style}`
     return (
       <Box flexDirection="column">
         <Client key={key} module="./breathe.tsx" width={e.viewport?.columns ?? 80} height={rows}
-          props={{ exercise: config.exercise, style: running.style, elapsedMs }} />
+          props={{ exercise: running.exercise, style: running.style, elapsedMs }} />
         {await next(e)}
       </Box>
     )

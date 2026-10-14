@@ -38,6 +38,13 @@ export const resolveExercise = (word: string): ExerciseKey | undefined => ALIASE
 
 export const exerciseOf = (key: unknown): Exercise => EXERCISES.find(e => e.key === key) ?? EXERCISES[0]!
 
+/** The exercise for a turn: the setting, or at random, never the one just done. */
+export function pickExercise(setting: ExerciseKey | 'random', last: ExerciseKey | undefined, random: () => number = Math.random): ExerciseKey {
+  if (setting !== 'random') return setting
+  const pool = EXERCISES.filter(e => e.key !== last)
+  return pool[Math.floor(random() * pool.length)]?.key ?? 'hrv'
+}
+
 export const cycleMs = (ex: Exercise): number => ex.inhaleMs + ex.hold1Ms + ex.exhaleMs + ex.hold2Ms
 
 export type PhaseLabel = 'Breathe in' | 'Sip in' | 'Hold' | 'Breathe out'

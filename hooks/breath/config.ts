@@ -5,7 +5,7 @@ import { STYLES, isStyle, type Style } from './shapes.ts'
 
 export type Config = {
   enabled: boolean
-  exercise: ExerciseKey
+  exercise: ExerciseKey | 'random'
   style: Style | 'random'
   /** Seconds Claude works before the band appears; 0 shows it at once. */
   delay: number
@@ -13,14 +13,14 @@ export type Config = {
   spinner: boolean
 }
 
-export const DEFAULTS: Config = { enabled: true, exercise: 'hrv', style: 'random', delay: 0, spinner: true }
+export const DEFAULTS: Config = { enabled: true, exercise: 'random', style: 'random', delay: 0, spinner: true }
 
 /** A config from what the store held, field by field, defaults for the rest. */
 export function readConfig(saved: unknown): Config {
   const s = (typeof saved === 'object' && saved !== null ? saved : {}) as Record<string, unknown>
   return {
     enabled: typeof s.enabled === 'boolean' ? s.enabled : DEFAULTS.enabled,
-    exercise: isExerciseKey(s.exercise) ? s.exercise : DEFAULTS.exercise,
+    exercise: s.exercise === 'random' || isExerciseKey(s.exercise) ? s.exercise : DEFAULTS.exercise,
     style: s.style === 'random' || isStyle(s.style) ? s.style : DEFAULTS.style,
     delay: typeof s.delay === 'number' && s.delay >= 0 && Number.isFinite(s.delay) ? s.delay : DEFAULTS.delay,
     spinner: typeof s.spinner === 'boolean' ? s.spinner : DEFAULTS.spinner,
@@ -28,14 +28,15 @@ export function readConfig(saved: unknown): Config {
 }
 
 export function statusLine(c: Config): string {
-  const ex = exerciseOf(c.exercise)
-  return `breathe: ${c.enabled ? 'on' : 'off'} · ${ex.name} (${ex.pattern}) · style ${c.style} · delay ${c.delay}s · spinner ${c.spinner ? 'on' : 'off'}`
+  const ex = c.exercise === 'random' ? 'random exercise' : `${exerciseOf(c.exercise).name} (${exerciseOf(c.exercise).pattern})`
+  return `breathe: ${c.enabled ? 'on' : 'off'} · ${ex} · style ${c.style} · delay ${c.delay}s · spinner ${c.spinner ? 'on' : 'off'}`
 }
 
 export const HELP = [
   '/breathe               status',
   '/breathe on | off      show or hide the breathing band while Claude works',
   ...EXERCISES.map(e => `/breathe ${e.key.padEnd(14)}${e.name}: ${e.pattern}`),
+  '/breathe random        a different exercise each turn',
   `/breathe style <name>  ${STYLES.join(', ')} or random`,
   '/breathe delay <s>     seconds Claude works before the band appears (0 = at once)',
   '/breathe spinner on|off  read the phase in the spinner line too',
@@ -51,7 +52,7 @@ export function applyCommand(config: Config, args: string): { config: Config; te
     const next = { ...config, enabled: head === 'on' }
     return { config: next, text: statusLine(next) }
   }
-  const exercise = resolveExercise(head)
+  const exercise: Config['exercise'] | undefined = head === 'random' ? 'random' : resolveExercise(head)
   if (exercise) {
     const next = { ...config, exercise }
     return { config: next, text: statusLine(next) }
